@@ -28,9 +28,11 @@
 #include <iostream>
 #include <thread>
 
-#include "display/display.hh"
-#include "input/camera.hh"
-#include "util/raster_handle.hh"
+// #include "display/display.hh"
+#include "eventloop.hh"
+#include "stats_printer.hh"
+#include "video/camera.hh"
+#include "video/raster.hh"
 
 using namespace std;
 
@@ -85,26 +87,35 @@ int main( int argc, char* argv[] )
     }
   }
 
-  Camera camera {
-    1280, 720, PIXEL_FORMAT_STRS.at( pixel_format ), camera_device
-  };
+  Camera camera { 640, 480, camera_device };
 
-  RasterHandle r { RasterHandle { 1280, 720 } };
-  VideoDisplay display { r, fullscreen };
+  (void) fullscreen;
+  RasterYUV422 camera_raster { 640, 480 };
+  auto loop = make_shared<EventLoop>();
 
-  while ( true ) {
-    auto start = chrono::high_resolution_clock::now();
-    
-    auto raster = camera.get_next_frame();
+  loop->add_rule( "read camera frame", camera.fd(), Direction::In, [&] {
+    camera.get_next_frame( camera_raster );
+  } );
 
-    auto end = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::milliseconds>( end - start );
-    // cout << "Time taken: " << duration.count() << " ms" << endl;
+  StatsPrinterTask stats_printer { loop };
 
-    if ( raster.has_value() ) {
-      display.draw( *raster );
-    }
+  while ( loop->wait_next_event( -1 )
+          != EventLoop::Result::Exit ) {
   }
+
+  // while ( true ) {
+  //   // auto start = chrono::high_resolution_clock::now();
+    
+  //   camera.get_next_frame( raster );
+
+  //   // auto end = chrono::high_resolution_clock::now();
+  //   // auto duration = chrono::duration_cast<chrono::milliseconds>( end - start );
+  //   // cout << "Time taken: " << duration.count() << " ms" << endl;
+
+  //   // if ( raster.has_value() ) {
+  //   //   display.draw( *raster );
+  //   // }
+  // }
 
   return EXIT_SUCCESS;
 }

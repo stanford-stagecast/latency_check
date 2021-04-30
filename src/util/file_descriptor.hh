@@ -1,207 +1,113 @@
-/* -*-mode:c++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+#pragma once
 
-/* Copyright 2013-2018 the Alfalfa authors
-                       and the Massachusetts Institute of Technology
+#include <cstddef>
+#include <limits>
+#include <memory>
+#include <vector>
 
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are
-   met:
+#include "spans.hh"
 
-      1. Redistributions of source code must retain the above copyright
-         notice, this list of conditions and the following disclaimer.
-
-      2. Redistributions in binary form must reproduce the above copyright
-         notice, this list of conditions and the following disclaimer in the
-         documentation and/or other materials provided with the distribution.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-   HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
-
-#ifndef FILE_DESCRIPTOR_HH
-#define FILE_DESCRIPTOR_HH
-
-#include <algorithm>
-#include <cassert>
-#include <cstdio>
-#include <string>
-#include <sys/stat.h>
-#include <unistd.h>
-
-#include "chunk.hh"
-#include "exception.hh"
-
-static constexpr size_t BUFFER_SIZE = 1048576;
-
+//! A reference-counted handle to a file descriptor
 class FileDescriptor
 {
-private:
-  int fd_;
-  bool eof_ { false };
+  //! \brief A handle on a kernel file descriptor.
+  //! \details FileDescriptor objects contain a std::shared_ptr to a FDWrapper.
+  class FDWrapper
+  {
+  public:
+    int _fd;                   //!< The file descriptor number returned by the kernel
+    bool _eof = false;         //!< Flag indicating whether FDWrapper::_fd is at EOF
+    bool _closed = false;      //!< Flag indicating whether FDWrapper::_fd has been closed
+    bool _non_blocking = true; //!< Flag indicating whether FDWrapper::_fd is non-blocking
+    unsigned _read_count = 0;  //!< The number of times FDWrapper::_fd has been read
+    unsigned _write_count = 0; //!< The numberof times FDWrapper::_fd has been written
 
-  unsigned int read_count_, write_count_;
+    //! Construct from a file descriptor number returned by the kernel
+    explicit FDWrapper( const int fd );
+    //! Closes the file descriptor upon destruction
+    ~FDWrapper();
+    //! Calls [close(2)](\ref man2::close) on FDWrapper::_fd
+    void close();
+
+    int CheckSystemCall( const std::string_view s_attempt, const int return_value ) const;
+
+    //! \name
+    //! An FDWrapper cannot be copied or moved
+
+    //!@{
+    FDWrapper( const FDWrapper& other ) = delete;
+    FDWrapper& operator=( const FDWrapper& other ) = delete;
+    FDWrapper( FDWrapper&& other ) = delete;
+    FDWrapper& operator=( FDWrapper&& other ) = delete;
+    //!@}
+  };
+
+  //! A reference-counted handle to a shared FDWrapper
+  std::shared_ptr<FDWrapper> _internal_fd;
+
+  // private constructor used to duplicate the FileDescriptor (increase the reference count)
+  explicit FileDescriptor( std::shared_ptr<FDWrapper> other_shared_ptr );
 
 protected:
-  void register_read( void ) { read_count_++; }
-  void register_write( void ) { write_count_++; }
+  void set_eof() { _internal_fd->_eof = true; }
+  void register_read() { ++_internal_fd->_read_count; }   //!< increment read count
+  void register_write() { ++_internal_fd->_write_count; } //!< increment write count
+
+  int CheckSystemCall( const std::string_view s_attempt, const int return_value ) const
+  {
+    return _internal_fd->CheckSystemCall( s_attempt, return_value );
+  }
 
 public:
-  // NOTE that the below constructor first seeks file to 0.
-  FileDescriptor( FILE* file )
-    : fd_( ( fseek( file, 0, SEEK_SET ), fileno( file ) ) )
-    , read_count_( 0 )
-    , write_count_( 0 )
-  {}
-  FileDescriptor( const int s_fd )
-    : fd_( s_fd )
-    , read_count_( 0 )
-    , write_count_( 0 )
-  {}
+  //! Construct from a file descriptor number returned by the kernel
+  explicit FileDescriptor( const int fd );
 
-  ~FileDescriptor()
-  {
-    if ( fd_ >= 0 ) {
-      SystemCall( "close", close( fd_ ) );
-    }
-  }
+  //! Free the std::shared_ptr; the FDWrapper destructor calls close() when the refcount goes to zero.
+  ~FileDescriptor() = default;
 
-  uint64_t size( void ) const
-  {
-    struct stat file_info;
-    SystemCall( "fstat", fstat( fd_, &file_info ) );
-    return file_info.st_size;
-  }
+  //! Read into `buffer`
+  //! \returns number of bytes read
+  size_t read( string_span buffer );
 
-  const int& fd_num( void ) const { return fd_; }
+  //! Attempt to write a buffer
+  //! \returns number of bytes written
+  size_t write( const std::string_view buffer );
 
-  bool eof() { return eof_; }
+  size_t write( const std::vector<std::string_view>& buffers );
 
-  unsigned int read_count( void ) const { return read_count_; }
-  unsigned int write_count( void ) const { return write_count_; }
+  //! Close the underlying file descriptor
+  void close() { _internal_fd->close(); }
 
-  /* disallow copying or assigning */
-  FileDescriptor( const FileDescriptor& other ) = delete;
-  const FileDescriptor& operator=( const FileDescriptor& other ) = delete;
+  //! Copy a FileDescriptor explicitly, increasing the FDWrapper refcount
+  FileDescriptor duplicate() const;
 
-  /* allow moves */
-  FileDescriptor( FileDescriptor&& other )
-    : fd_( other.fd_ )
-    , eof_( other.eof_ )
-    , read_count_( other.read_count_ )
-    , write_count_( other.write_count_ )
-  {
-    // Need to make sure the old file descriptor doesn't try to
-    // close fd_ when it is destructed
-    other.fd_ = -1;
-  }
+  //! Set blocking(true) or non-blocking(false)
+  void set_blocking( const bool blocking );
 
-  std::string::const_iterator write( const std::string::const_iterator& begin,
-                                     const std::string::const_iterator& end )
-  {
-    if ( begin >= end ) {
-      throw std::runtime_error( "nothing to write" );
-    }
+  //! Size of file
+  off_t size() const;
 
-    ssize_t bytes_written
-      = SystemCall( "write", ::write( fd_, &*begin, end - begin ) );
+  //! \name FDWrapper accessors
+  //!@{
+  int fd_num() const { return _internal_fd->_fd; }                        //!< \brief underlying descriptor number
+  bool eof() const { return _internal_fd->_eof; }                         //!< \brief EOF flag state
+  bool closed() const { return _internal_fd->_closed; }                   //!< \brief closed flag state
+  unsigned int read_count() const { return _internal_fd->_read_count; }   //!< \brief number of reads
+  unsigned int write_count() const { return _internal_fd->_write_count; } //!< \brief number of writes
+  //!@}
 
-    if ( bytes_written == 0 ) {
-      throw std::runtime_error( "write returned 0" );
-    }
-
-    register_write();
-
-    return begin + bytes_written;
-  }
-
-  std::string::const_iterator write( const std::string& buffer,
-                                     const bool write_all = true )
-  {
-    auto it = buffer.begin();
-
-    do {
-      it = write( it, buffer.end() );
-    } while ( write_all and ( it != buffer.end() ) );
-
-    return it;
-  }
-
-  void write( const Chunk& buffer )
-  {
-    Chunk amount_left_to_write = buffer;
-    while ( amount_left_to_write.size() > 0 ) {
-      ssize_t bytes_written = SystemCall(
-        "write",
-        ::write(
-          fd_, amount_left_to_write.buffer(), amount_left_to_write.size() ) );
-      if ( bytes_written == 0 ) {
-        throw internal_error( "write", "returned 0" );
-      }
-      amount_left_to_write = amount_left_to_write( bytes_written );
-    }
-
-    register_write();
-  }
-
-  std::string getline()
-  {
-    std::string ret;
-
-    while ( true ) {
-      std::string char_read = read( 1 );
-
-      if ( eof() or char_read == "\n" ) {
-        break;
-      }
-
-      ret.append( char_read );
-    }
-
-    return ret;
-  }
-
-  std::string read( const size_t limit = BUFFER_SIZE )
-  {
-    char buffer[BUFFER_SIZE];
-
-    if ( eof() ) {
-      throw std::runtime_error( "read() called after eof was set" );
-    }
-
-    ssize_t bytes_read = SystemCall(
-      "read", ::read( fd_, buffer, std::min( BUFFER_SIZE, limit ) ) );
-
-    if ( bytes_read == 0 ) {
-      eof_ = true;
-    }
-
-    register_read();
-
-    return std::string( buffer, bytes_read );
-  }
-
-  std::string read_exactly( const size_t length )
-  {
-    std::string ret;
-    while ( ret.size() < length ) {
-      ret.append( read( length - ret.size() ) );
-      if ( eof() ) {
-        throw std::runtime_error(
-          "read_exactly: FileDescriptor reached EOF before reaching target" );
-      }
-    }
-
-    assert( ret.size() == length );
-    return ret;
-  }
+  //! \name Copy/move constructor/assignment operators
+  //! FileDescriptor can be moved, but cannot be copied (but see duplicate())
+  //!@{
+  FileDescriptor( const FileDescriptor& other ) = delete;            //!< \brief copy construction is forbidden
+  FileDescriptor& operator=( const FileDescriptor& other ) = delete; //!< \brief copy assignment is forbidden
+  FileDescriptor( FileDescriptor&& other ) = default;                //!< \brief move construction is allowed
+  FileDescriptor& operator=( FileDescriptor&& other ) = default;     //!< \brief move assignment is allowed
+                                                                     //!@}
 };
 
-#endif /* FILE_DESCRIPTOR_HH */
+//! \class FileDescriptor
+//! In addition, FileDescriptor tracks EOF state and calls to FileDescriptor::read and
+//! FileDescriptor::write, which EventLoop uses to detect busy loop conditions.
+//!
+//! For an example of FileDescriptor use, see the EventLoop class documentation.

@@ -1,15 +1,19 @@
 /* -*-mode:c++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
-/* Copyright 2013-2018 the Alfalfa authors
+/* Copyright 2013-2019 the Alfalfa authors
                        and the Massachusetts Institute of Technology
+
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are
    met:
+
       1. Redistributions of source code must retain the above copyright
          notice, this list of conditions and the following disclaimer.
+
       2. Redistributions in binary form must reproduce the above copyright
          notice, this list of conditions and the following disclaimer in the
          documentation and/or other materials provided with the distribution.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -22,58 +26,44 @@
    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
-#ifndef CAMERA_HH
-#define CAMERA_HH
+#pragma once
 
-#include <linux/videodev2.h>
-
+#include <cstdio>
+#include <cstdlib>
+#include <jpeglib.h>
 #include <optional>
-#include <unordered_map>
+#include <string_view>
 
-#include "frame_input.hh"
-#include "jpeg.hh"
-#include "util/file_descriptor.hh"
-#include "util/mmap_region.hh"
-#include "util/raster_handle.hh"
+#include "raster.hh"
 
-static const std::unordered_map<std::string, uint32_t> PIXEL_FORMAT_STRS {
-  { "NV12", V4L2_PIX_FMT_NV12 },
-  { "YUYV", V4L2_PIX_FMT_YUYV },
-  { "YU12", V4L2_PIX_FMT_YUV420 },
-  { "MJPG", V4L2_PIX_FMT_MJPEG }
+class JPEGException : public std::runtime_error
+{
+public:
+  using std::runtime_error::runtime_error;
 };
 
-class Camera : public FrameInput
+class JPEGDecompresser
 {
-private:
-  const unsigned int NUM_BUFFERS = 4;
-  const unsigned int framerate_ = 60;
+  jpeg_decompress_struct decompresser_ {};
+  jpeg_error_mgr error_manager_ {};
 
-  uint16_t width_;
-  uint16_t height_;
+  static void error( const j_common_ptr cinfo );
+  static void info( const j_common_ptr cinfo, const int level );
 
-  FileDescriptor camera_fd_;
-  std::vector<MMap_Region> kernel_v4l2_buffers_;
-  unsigned int next_buffer_index = 0;
-
-  uint32_t pixel_format_;
-
-  std::optional<JPEGDecompresser> jpegdec_ {};
+  bool bad_ {};
 
 public:
-  Camera( const uint16_t width,
-          const uint16_t height,
-          const uint32_t pixel_format = V4L2_PIX_FMT_YUV420,
-          const std::string device = "/dev/video0" );
+  JPEGDecompresser();
+  ~JPEGDecompresser();
 
-  ~Camera();
+  void begin_decoding( const std::string_view chunk );
 
-  std::optional<RasterHandle> get_next_frame() override;
+  void decode( RasterYUV422& r );
 
-  uint16_t display_width() { return width_; }
-  uint16_t display_height() { return height_; }
+  unsigned int width() const;
+  unsigned int height() const;
 
-  FileDescriptor& fd() { return camera_fd_; }
+  bool bad() const { return bad_; }
+
+  void reset();
 };
-
-#endif
