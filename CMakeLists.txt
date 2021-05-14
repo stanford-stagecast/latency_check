@@ -19,12 +19,14 @@ include ( etc/clang_tidy.cmake )
 
 file ( GLOB CHECKER_SRC
     src/util/*
-    #src/display/*
+    src/display/*
     src/video/*
 )
 
 include_directories ( src )
 include_directories ("${PROJECT_SOURCE_DIR}/src/util")
+include_directories ("${PROJECT_SOURCE_DIR}/src/display")
+include_directories ("${PROJECT_SOURCE_DIR}/src/video")
 
 add_library ( checker STATIC
     ${CHECKER_SRC}

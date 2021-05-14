@@ -164,7 +164,6 @@ void Camera::get_next_frame( RasterYUV422& raster )
       } break;
 
       case V4L2_PIX_FMT_MJPEG:
-        break;
         if ( frame_count_ > 5 ) {
           try {
             jpegdec_.begin_decoding( static_cast<string_view>( mmap_region ).substr( 0, buffer_info.bytesused ) );

@@ -28,11 +28,11 @@
 #include <iostream>
 #include <thread>
 
-// #include "display/display.hh"
+#include "display.hh"
 #include "eventloop.hh"
 #include "stats_printer.hh"
-#include "video/camera.hh"
-#include "video/raster.hh"
+#include "camera.hh"
+#include "raster.hh"
 
 using namespace std;
 
@@ -88,13 +88,14 @@ int main( int argc, char* argv[] )
   }
 
   Camera camera { 640, 480, camera_device };
+  VideoDisplay display { 640, 480, fullscreen };
 
-  (void) fullscreen;
   RasterYUV422 camera_raster { 640, 480 };
   auto loop = make_shared<EventLoop>();
 
   loop->add_rule( "read camera frame", camera.fd(), Direction::In, [&] {
     camera.get_next_frame( camera_raster );
+    display.draw( camera_raster );
   } );
 
   StatsPrinterTask stats_printer { loop };
@@ -102,20 +103,6 @@ int main( int argc, char* argv[] )
   while ( loop->wait_next_event( -1 )
           != EventLoop::Result::Exit ) {
   }
-
-  // while ( true ) {
-  //   // auto start = chrono::high_resolution_clock::now();
-    
-  //   camera.get_next_frame( raster );
-
-  //   // auto end = chrono::high_resolution_clock::now();
-  //   // auto duration = chrono::duration_cast<chrono::milliseconds>( end - start );
-  //   // cout << "Time taken: " << duration.count() << " ms" << endl;
-
-  //   // if ( raster.has_value() ) {
-  //   //   display.draw( *raster );
-  //   // }
-  // }
 
   return EXIT_SUCCESS;
 }
