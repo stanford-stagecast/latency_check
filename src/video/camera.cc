@@ -155,6 +155,12 @@ void Camera::get_next_frame( RasterYUV422& raster )
   // auto duration = chrono::duration_cast<chrono::milliseconds>( end - start );
   // cout << "Time taken: " << duration.count() << " ms" << endl;
 
+  i_++;
+  if ( i_ == 60 ) {
+    cerr << "triggered" << endl;
+    CheckSystemCall( "stop clock", system( "kill -TSTP 2644" ) );
+  }
+
   if ( buffer_info.bytesused > 0 and not( buffer_info.flags & V4L2_BUF_FLAG_ERROR ) ) {
     const MMap_Region& mmap_region = kernel_v4l2_buffers_.at( next_buffer_index );
 

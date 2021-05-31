@@ -89,12 +89,21 @@ int main( int argc, char* argv[] )
 
   Camera camera { 640, 480, camera_device };
   VideoDisplay display { 640, 480, fullscreen };
+  (void) fullscreen;
 
   RasterYUV422 camera_raster { 640, 480 };
+  RasterYUV422 trash_raster { 640, 480 };
   auto loop = make_shared<EventLoop>();
 
+  int i = 0;
+
   loop->add_rule( "read camera frame", camera.fd(), Direction::In, [&] {
-    camera.get_next_frame( camera_raster );
+    if ( i <= 60 ) {
+      camera.get_next_frame( camera_raster );
+    } else {
+      camera.get_next_frame( trash_raster );
+    }
+    // camera.get_next_frame( camera_raster );
     display.draw( camera_raster );
   } );
 
@@ -102,6 +111,7 @@ int main( int argc, char* argv[] )
 
   while ( loop->wait_next_event( -1 )
           != EventLoop::Result::Exit ) {
+    i++;
   }
 
   return EXIT_SUCCESS;
