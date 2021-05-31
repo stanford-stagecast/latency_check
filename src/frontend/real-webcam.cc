@@ -87,12 +87,12 @@ int main( int argc, char* argv[] )
     }
   }
 
-  Camera camera { 640, 480, camera_device };
+  Camera camera { 640, 480, camera_device, V4L2_PIX_FMT_NV12 };
   VideoDisplay display { 640, 480, fullscreen };
   (void) fullscreen;
 
-  RasterYUV422 camera_raster { 640, 480 };
-  RasterYUV422 trash_raster { 640, 480 };
+  RasterYUV420 camera_raster { 640, 480 };
+  RasterYUV420 trash_raster { 640, 480 };
   auto loop = make_shared<EventLoop>();
 
   int i = 0;

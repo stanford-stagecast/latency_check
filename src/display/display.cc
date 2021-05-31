@@ -190,6 +190,18 @@ void VideoDisplay::draw( RasterYUV422& image )
   repaint();
 }
 
+void VideoDisplay::draw( RasterYUV420& image )
+{
+  if ( width_ != image.width() or height_ != image.height() ) {
+    throw runtime_error( "inconsistent raster dimensions." );
+  }
+
+  Y_.load( image.Y(), GL_TEXTURE0 );
+  Cb_.load( image.Cb(), GL_TEXTURE1 );
+  Cr_.load( image. Cr(), GL_TEXTURE2 );
+  repaint();
+}
+
 void VideoDisplay::repaint()
 {
   const auto window_size = window().window_size();

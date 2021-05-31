@@ -68,6 +68,7 @@ public:
   VideoDisplay( const unsigned int width, const unsigned int height, const bool fullscreen = false );
 
   void draw( RasterYUV422& image );
+  void draw( RasterYUV420& image );
   void repaint();
   void resize( const unsigned int width, const unsigned int height );
 
