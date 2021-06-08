@@ -1,4 +1,5 @@
 set (default_build_type "Release")
+set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (NOT (CMAKE_BUILD_TYPE_SHADOW STREQUAL CMAKE_BUILD_TYPE))
     if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         message (STATUS "Setting build type to '${default_build_type}'")
@@ -12,5 +13,4 @@ endif ()
 message (STATUS "  NOTE: You can choose a build type by calling cmake with one of:")
 message (STATUS "    -DCMAKE_BUILD_TYPE=Release   -- full optimizations")
 message (STATUS "    -DCMAKE_BUILD_TYPE=Debug     -- better debugging experience in gdb")
-message (STATUS "    -DCMAKE_BUILD_TYPE=RelASan   -- full optimizations plus address and undefined-behavior sanitizers")
-message (STATUS "    -DCMAKE_BUILD_TYPE=DebugASan -- debug plus sanitizers")
+

@@ -87,23 +87,23 @@ int main( int argc, char* argv[] )
     }
   }
 
-  Camera camera { 640, 480, camera_device, V4L2_PIX_FMT_NV12 };
+  Camera camera { 640, 480, camera_device };
   VideoDisplay display { 640, 480, fullscreen };
   (void) fullscreen;
 
-  RasterYUV420 camera_raster { 640, 480 };
-  RasterYUV420 trash_raster { 640, 480 };
+  RasterYUV422 camera_raster { 640, 480 };
+  RasterYUV422 trash_raster { 640, 480 };
   auto loop = make_shared<EventLoop>();
 
   int i = 0;
 
   loop->add_rule( "read camera frame", camera.fd(), Direction::In, [&] {
-    if ( i <= 60 ) {
-      camera.get_next_frame( camera_raster );
-    } else {
-      camera.get_next_frame( trash_raster );
-    }
-    // camera.get_next_frame( camera_raster );
+    // if ( i <= 60 ) {
+    //   camera.get_next_frame( camera_raster );
+    // } else {
+    //   camera.get_next_frame( trash_raster );
+    // }
+    camera.get_next_frame( camera_raster );
     display.draw( camera_raster );
   } );
 
