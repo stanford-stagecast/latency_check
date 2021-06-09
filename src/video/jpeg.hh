@@ -50,8 +50,6 @@ class JPEGDecompresser
   static void error( const j_common_ptr cinfo );
   static void info( const j_common_ptr cinfo, const int level );
 
-  bool bad_ {};
-
 public:
   JPEGDecompresser();
   ~JPEGDecompresser();
@@ -62,8 +60,6 @@ public:
 
   unsigned int width() const;
   unsigned int height() const;
-
-  bool bad() const { return bad_; }
 
   void reset();
 };

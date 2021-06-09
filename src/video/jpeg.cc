@@ -50,7 +50,6 @@ JPEGDecompresser::~JPEGDecompresser()
 void JPEGDecompresser::reset()
 {
   jpeg_abort_decompress( &decompresser_ );
-  bad_ = false;
 }
 
 void JPEGDecompresser::error( const j_common_ptr cinfo )
@@ -72,15 +71,11 @@ void JPEGDecompresser::info( const j_common_ptr cinfo, const int level )
 
 void JPEGDecompresser::begin_decoding( const string_view chunk )
 {
-  if ( bad() ) {
-    return;
-  }
-
   try {
     jpeg_mem_src( &decompresser_, reinterpret_cast<const uint8_t*>( chunk.data() ), chunk.size() );
   } catch ( JPEGException& e ) {
     cerr << "JPEG exception in begin_decoding: " << e.what() << "\n";
-    bad_ = true;
+    reset();
     return;
   }
 
@@ -117,10 +112,6 @@ unsigned int JPEGDecompresser::height() const
 
 void JPEGDecompresser::decode( RasterYUV422& r )
 {
-  if ( bad_ ) {
-    return;
-  }
-
   if ( r.height() != height() or r.width() != width() ) {
     throw runtime_error( "size mismatch" );
   }
@@ -138,6 +129,6 @@ void JPEGDecompresser::decode( RasterYUV422& r )
     jpeg_finish_decompress( &decompresser_ );
   } catch ( const JPEGException& e ) {
     cerr << "JPEG exception in decompress: " << e.what() << "\n";
-    bad_ = true;
+    reset();
   }
 }

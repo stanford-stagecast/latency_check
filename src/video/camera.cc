@@ -187,14 +187,6 @@ void Camera::get_next_frame( RasterYUV422& raster )
   CheckSystemCall( "enqueue buffer", ioctl( camera_fd_.fd_num(), VIDIOC_QBUF, &buffer_info ) );
 
   next_buffer_index = ( next_buffer_index + 1 ) % NUM_BUFFERS;
-
-  if ( jpegdec_.bad() ) {
-    cerr << "Restarting Camera for " << device_name_ << "... ";
-    CheckSystemCall( "stream off", ioctl( camera_fd_.fd_num(), VIDIOC_STREAMOFF, &capture_type ) );
-    jpegdec_.reset();
-    init();
-    cerr << "done.\n";
-  }
 }
 
 void Camera::get_next_frame( RasterYUV420& raster )
