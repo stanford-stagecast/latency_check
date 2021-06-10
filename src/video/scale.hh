@@ -24,7 +24,7 @@ class Scaler
   void create_context();
 
 public:
-  Scaler( const uint16_t s_input_width = 3840, const uint16_t s_input_height = 2160 )
+  Scaler( const uint16_t s_input_width = 1280, const uint16_t s_input_height = 720 )
     : input_width( s_input_width )
     , input_height( s_input_height )
   {

@@ -47,7 +47,7 @@ class Camera
 {
 private:
   static constexpr unsigned int NUM_BUFFERS = 4;
-  static constexpr unsigned int FRAME_RATE = 24;
+  static constexpr unsigned int FRAME_RATE = 60;
   int i_ = 0;
 
   uint16_t width_;

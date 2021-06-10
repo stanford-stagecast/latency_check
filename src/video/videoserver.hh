@@ -15,7 +15,7 @@ struct CompositingGroup
 {
   std::string name_;
   Compositor compositor_ {};
-  H264Encoder feed_ { 1280, 720, 24, "veryfast", "zerolatency" };
+  H264Encoder feed_ { 1280, 720, 60, "veryfast", "zerolatency" };
   Address destination_ { Address::abstract_unix( "stagecast-" + name_ + "-video" ) };
   Address destination2_ { Address::abstract_unix( "stagecast-" + name_ + "-video-filmout" ) };
   UnixDatagramSocket broadcast_socket_ {};
@@ -68,7 +68,7 @@ class VideoServer : public Summarizable
 
   RasterYUV420 default_raster_ { 1280, 720 };
   std::shared_ptr<RasterRGBA> default_raster_keyed_ = std::make_shared<RasterRGBA>( 1280, 720 );
-  H264Encoder camera_feed_ { 1280, 720, 24, "veryfast", "zerolatency" };
+  H264Encoder camera_feed_ { 1280, 720, 60, "veryfast", "zerolatency" };
   uint8_t camera_feed_live_no_ {};
   Address camera_destination_ { Address::abstract_unix( "stagecast-camera-video" ) };
   Address camera_destination2_ { Address::abstract_unix( "stagecast-camera-video-filmout" ) };

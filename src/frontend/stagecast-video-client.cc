@@ -31,11 +31,11 @@ void program_body( const string& device, const string& host, const string& servi
 
   FileDescriptor output { CheckSystemCall( "dup STDERR_FILENO", dup( STDOUT_FILENO ) ) };
 
-  Camera camera { 3840, 2160, "/dev/"s + device };
+  Camera camera { 1280, 720, "/dev/"s + device };
 
-  RasterYUV422 camera_raster { 3840, 2160 };
+  RasterYUV422 camera_raster { 1280, 720 };
   RasterYUV420 output_raster { 1280, 720 };
-  H264Encoder encoder { 1280, 720, 24, "fast", "zerolatency" };
+  H264Encoder encoder { 1280, 720, 60, "fast", "zerolatency" };
   Scaler scaler;
   Cropper cropper;
 

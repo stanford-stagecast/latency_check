@@ -71,7 +71,7 @@ class ClientConnection
   shared_ptr<vector<string>> camera_names_;
   SSLSession ssl_session_;
   WebSocketServer ws_server_;
-  MP4Writer muxer_ { 24, 1280, 720 };
+  MP4Writer muxer_ { 60, 1280, 720 };
   WebSocketFrame ws_frame_;
 
   uint32_t video_frame_count_ {};
@@ -134,7 +134,7 @@ private:
         } else if ( fields_.at( 1 ) == "zoom:y" ) {
           instruction.y = stoi( string( fields_.at( 2 ) ) );
         } else if ( fields_.at( 1 ) == "zoom:zoom" ) {
-          instruction.width = lrint( 3840.0 / stof( string( fields_.at( 2 ) ) ) );
+          instruction.width = lrint( 1280.0 / stof( string( fields_.at( 2 ) ) ) );
         } else if ( fields_.at( 1 ) == "crop:left" ) {
           instruction.crop_left = stoi( string( fields_.at( 2 ) ) );
         } else if ( fields_.at( 1 ) == "crop:right" ) {
@@ -171,7 +171,7 @@ public:
       frames_since_idr_++;
     }
 
-    if ( skipping_ and frames_since_idr_ >= 47 ) {
+    if ( skipping_ and frames_since_idr_ >= 119 ) {
       idrs_since_skip_ = 0;
     } else {
       muxer_.write( s, video_frame_count_, video_frame_count_ );
@@ -317,7 +317,7 @@ public:
           if ( ws_server_.endpoint().ready() ) {
             parse_message( ws_server_.endpoint().message() );
 
-            if ( last_buffer_ > 0.11 and mean_buffer_ > 0.11 and idrs_since_skip_ > 0 ) {
+            if ( last_buffer_ > 0.05 and mean_buffer_ > 0.05 and idrs_since_skip_ > 0 ) {
               skipping_ = true;
             }
 

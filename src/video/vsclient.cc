@@ -11,8 +11,8 @@ VSClient::VSClient( const uint8_t node_id, CryptoSession&& crypto )
 {
   zoom_.x = 0;
   zoom_.y = 0;
-  zoom_.width = 3840;
-  zoom_.height = 2160;
+  zoom_.width = 1280;
+  zoom_.height = 720;
 
   zoom_.crop_left = zoom_.crop_right = zoom_.crop_top = zoom_.crop_bottom = 0;
 }

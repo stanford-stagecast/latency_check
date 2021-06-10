@@ -3,7 +3,7 @@
 
 using namespace std;
 
-static constexpr uint64_t frame_interval = 40'000'000; /* almost 1/24 s */
+static constexpr uint64_t frame_interval = 16'000'000; /* almost 1/24 s */
 
 void VideoSource::push( const H264Encoder::EncodedNAL& nal, const uint64_t now )
 {

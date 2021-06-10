@@ -10,7 +10,7 @@ using namespace std::chrono;
 
 uint64_t VideoServer::server_clock() const
 {
-  return ( Timer::timestamp_ns() - global_ns_timestamp_at_creation_ ) * 24 / 1'000'000'000;
+  return ( Timer::timestamp_ns() - global_ns_timestamp_at_creation_ ) * 60 / 1'000'000'000;
 }
 
 void VideoServer::receive_keyrequest( const Address& src, const Ciphertext& ciphertext )
@@ -156,7 +156,7 @@ void VideoServer::json_summary( Json::Value& root ) const
     root["live"] = client.name();
     root["zoom"]["x"] = client.client().zoom_.x;
     root["zoom"]["y"] = client.client().zoom_.y;
-    root["zoom"]["zoom"] = float( 3840.0 ) / float( client.client().zoom_.width );
+    root["zoom"]["zoom"] = float( 1280.0 ) / float( client.client().zoom_.width );
 
     root["crop"]["left"] = client.client().zoom_.crop_left;
     root["crop"]["right"] = client.client().zoom_.crop_right;
@@ -186,19 +186,19 @@ void VideoServer::set_live( const string_view name )
 
 bool valid( const video_control& c )
 {
-  if ( c.x >= 3840 ) {
+  if ( c.x >= 1280 ) {
     return false;
   }
 
-  if ( c.y >= 2160 ) {
+  if ( c.y >= 720 ) {
     return false;
   }
 
-  if ( c.x + c.width > 3840 ) {
+  if ( c.x + c.width > 1280 ) {
     return false;
   }
 
-  if ( c.y + c.height > 2160 ) {
+  if ( c.y + c.height > 720 ) {
     return false;
   }
 
@@ -222,23 +222,23 @@ void VideoServer::set_zoom( const video_control& control )
   static constexpr uint16_t NEG1 = -1;
 
   if ( control.x != NEG1 ) {
-    existing_zoom.x = min( control.x, uint16_t( 3840 ) );
+    existing_zoom.x = min( control.x, uint16_t( 1280 ) );
 
     if ( not valid( existing_zoom ) ) {
-      existing_zoom.x = 3840 - existing_zoom.width;
+      existing_zoom.x = 1280 - existing_zoom.width;
     }
   } else if ( control.y != NEG1 ) {
-    existing_zoom.y = min( control.y, uint16_t( 2160 ) );
+    existing_zoom.y = min( control.y, uint16_t( 720 ) );
 
     if ( not valid( existing_zoom ) ) {
-      existing_zoom.y = 2160 - existing_zoom.height;
+      existing_zoom.y = 720 - existing_zoom.height;
     }
   } else if ( control.width != NEG1 ) {
     const uint16_t old_midpoint_x = existing_zoom.x + ( existing_zoom.width / 2 );
     const uint16_t old_midpoint_y = existing_zoom.y + ( existing_zoom.height / 2 );
 
-    existing_zoom.width = max( uint16_t( 1280 ), min( control.width, uint16_t( 3840 ) ) );
-    existing_zoom.height = 2160 * existing_zoom.width / 3840;
+    existing_zoom.width = max( uint16_t( 1280 ), min( control.width, uint16_t( 1280 ) ) );
+    existing_zoom.height = 720 * existing_zoom.width / 1280;
 
     if ( old_midpoint_x > existing_zoom.width / 2 ) {
       existing_zoom.x = old_midpoint_x - existing_zoom.width / 2;
@@ -253,25 +253,25 @@ void VideoServer::set_zoom( const video_control& control )
     }
 
     if ( not valid( existing_zoom ) ) {
-      existing_zoom.x = 3840 - existing_zoom.width;
-      existing_zoom.y = 2160 - existing_zoom.height;
+      existing_zoom.x = 1280 - existing_zoom.width;
+      existing_zoom.y = 720 - existing_zoom.height;
     }
   } else if ( control.crop_left != NEG1 ) {
-    existing_zoom.crop_left = min( control.crop_left, uint16_t( 3840 ) );
+    existing_zoom.crop_left = min( control.crop_left, uint16_t( 1280 ) );
   } else if ( control.crop_right != NEG1 ) {
-    existing_zoom.crop_right = min( control.crop_right, uint16_t( 3840 ) );
+    existing_zoom.crop_right = min( control.crop_right, uint16_t( 1280 ) );
   } else if ( control.crop_top != NEG1 ) {
-    existing_zoom.crop_top = min( control.crop_top, uint16_t( 2160 ) );
+    existing_zoom.crop_top = min( control.crop_top, uint16_t( 720 ) );
   } else if ( control.crop_bottom != NEG1 ) {
-    existing_zoom.crop_bottom = min( control.crop_bottom, uint16_t( 2160 ) );
+    existing_zoom.crop_bottom = min( control.crop_bottom, uint16_t( 720 ) );
   }
 
   if ( not valid( existing_zoom ) ) {
     cerr << "Warning, failed to correct zoom input.\n";
     existing_zoom.x = 0;
     existing_zoom.y = 0;
-    existing_zoom.width = 3840;
-    existing_zoom.height = 2160;
+    existing_zoom.width = 1280;
+    existing_zoom.height = 720;
     existing_zoom.crop_left = 0;
     existing_zoom.crop_right = 0;
     existing_zoom.crop_top = 0;
