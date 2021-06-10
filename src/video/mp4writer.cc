@@ -105,7 +105,7 @@ void MP4Writer::write( const string_view nal, const uint32_t presentation_no, co
     reinterpret_cast<const uint8_t*>( nal.data() ) ); /* hope that av_write_frame doesn't change contents */
   packet.size = nal.size();
   packet.stream_index = 0;
-  packet.duration = MP4_TIMEBASE / frame_rate_;
+  packet.duration = 0; //MP4_TIMEBASE / frame_rate_;
   packet.pos = -1;
 
   if ( is_idr( nal ) ) {
